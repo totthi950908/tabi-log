@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plane, Mail, Loader2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import ContactPage from '@/pages/ContactPage'
@@ -7,6 +8,7 @@ import PrivacyPage from '@/pages/PrivacyPage'
 type Mode = 'login' | 'signup' | 'forgot'
 
 export default function AuthPage() {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('login')
   const [showContact, setShowContact] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
@@ -46,7 +48,15 @@ export default function AuthPage() {
           password,
         })
         if (error) throw error
-        // 成功すると onAuthStateChange が発火し、画面が切り替わる。
+        // 成功すると onAuthStateChange が発火して画面が切り替わる。
+        // 着地先はホーム（招待リンク経由なら参加ページ）。
+        let pending: string | null = null
+        try {
+          pending = localStorage.getItem('pending_invite')
+        } catch {
+          /* ignore */
+        }
+        navigate(pending ? '/join' : '/', { replace: true })
       }
     } catch (err) {
       setError(translateError(err))
