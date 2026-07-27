@@ -10,6 +10,7 @@ import MapPage from '@/pages/MapPage'
 import SettingsPage from '@/pages/SettingsPage'
 import JoinPage from '@/pages/JoinPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
+import ContactPage from '@/pages/ContactPage'
 import BottomNav from '@/components/layout/BottomNav'
 
 export default function App() {
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/reset" element={<ResetPasswordPage />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />

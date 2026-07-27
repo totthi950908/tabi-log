@@ -1,17 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { Plane, Mail, Loader2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import ContactPage from '@/pages/ContactPage'
 
 type Mode = 'login' | 'signup' | 'forgot'
 
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login')
+  const [showContact, setShowContact] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [resetSentTo, setResetSentTo] = useState<string | null>(null)
+
+  if (showContact) return <ContactPage onBack={() => setShowContact(false)} />
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -236,6 +240,14 @@ export default function AuthPage() {
           </p>
         )}
       </form>
+
+      <button
+        type="button"
+        onClick={() => setShowContact(true)}
+        className="mt-4 w-full text-center text-xs text-subtle underline"
+      >
+        お問い合わせ・ご要望
+      </button>
     </Shell>
   )
 }

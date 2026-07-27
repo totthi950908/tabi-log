@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { LogOut, Loader2, Check, AlertTriangle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
@@ -13,6 +14,7 @@ const EMOJI_CHOICES = [
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [emoji, setEmoji] = useState('🧳')
@@ -157,6 +159,13 @@ export default function SettingsPage() {
           アカウントを削除する
         </button>
       </section>
+
+      <button
+        onClick={() => navigate('/contact')}
+        className="mt-4 w-full text-center text-sm text-muted underline"
+      >
+        お問い合わせ・ご要望
+      </button>
 
       <p className="mt-6 text-center text-xs text-subtle">たびろぐ</p>
 
