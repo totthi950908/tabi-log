@@ -160,12 +160,14 @@ export default function SettingsPage() {
         </button>
       </section>
 
-      <button
-        onClick={() => navigate('/contact')}
-        className="mt-4 w-full text-center text-sm text-muted underline"
-      >
-        お問い合わせ・ご要望
-      </button>
+      <div className="mt-4 flex justify-center gap-4 text-sm text-muted">
+        <button onClick={() => navigate('/contact')} className="underline">
+          お問い合わせ・ご要望
+        </button>
+        <button onClick={() => navigate('/privacy')} className="underline">
+          プライバシーポリシー
+        </button>
+      </div>
 
       <p className="mt-6 text-center text-xs text-subtle">たびろぐ</p>
 

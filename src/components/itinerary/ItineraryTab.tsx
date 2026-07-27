@@ -10,6 +10,7 @@ import type { Trip, Booking, PlanItem } from '@/types'
 import { listBookings, listPlanItems } from '@/lib/plan'
 import { errMsg } from '@/utils/error'
 import { eachDay, fmtDateTime, fmtDate, jpDate, tripStatus } from '@/utils/format'
+import { safeUrl } from '@/utils/url'
 import BookingForm, { BOOKING_TYPES } from './BookingForm'
 import PlanItemForm, { PLAN_CATEGORIES } from './PlanItemForm'
 import BookingLinks from '@/components/booking/BookingLinks'
@@ -260,9 +261,9 @@ function BookingCard({
               {booking.memo}
             </p>
           )}
-          {booking.url && (
+          {safeUrl(booking.url) && (
             <a
-              href={booking.url}
+              href={safeUrl(booking.url)!}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}

@@ -11,6 +11,7 @@ import SettingsPage from '@/pages/SettingsPage'
 import JoinPage from '@/pages/JoinPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import ContactPage from '@/pages/ContactPage'
+import PrivacyPage from '@/pages/PrivacyPage'
 import BottomNav from '@/components/layout/BottomNav'
 
 export default function App() {
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="/map" element={<MapPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />

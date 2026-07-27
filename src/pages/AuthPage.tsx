@@ -2,12 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { Plane, Mail, Loader2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import ContactPage from '@/pages/ContactPage'
+import PrivacyPage from '@/pages/PrivacyPage'
 
 type Mode = 'login' | 'signup' | 'forgot'
 
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login')
   const [showContact, setShowContact] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -16,6 +18,7 @@ export default function AuthPage() {
   const [resetSentTo, setResetSentTo] = useState<string | null>(null)
 
   if (showContact) return <ContactPage onBack={() => setShowContact(false)} />
+  if (showPrivacy) return <PrivacyPage onBack={() => setShowPrivacy(false)} />
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -241,13 +244,22 @@ export default function AuthPage() {
         )}
       </form>
 
-      <button
-        type="button"
-        onClick={() => setShowContact(true)}
-        className="mt-4 w-full text-center text-xs text-subtle underline"
-      >
-        お問い合わせ・ご要望
-      </button>
+      <div className="mt-4 flex justify-center gap-4 text-xs text-subtle">
+        <button
+          type="button"
+          onClick={() => setShowContact(true)}
+          className="underline"
+        >
+          お問い合わせ・ご要望
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowPrivacy(true)}
+          className="underline"
+        >
+          プライバシーポリシー
+        </button>
+      </div>
     </Shell>
   )
 }

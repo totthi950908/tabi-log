@@ -156,6 +156,18 @@ export default function ContactPage({ onBack }: { onBack?: () => void }) {
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : '送信する'}
           </button>
+
+          <p className="text-xs text-subtle text-center">
+            送信により
+            <button
+              type="button"
+              onClick={() => navigate('/privacy')}
+              className="underline mx-0.5"
+            >
+              プライバシーポリシー
+            </button>
+            に同意したものとみなします。
+          </p>
         </div>
       )}
     </div>
