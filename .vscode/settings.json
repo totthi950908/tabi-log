@@ -1,0 +1,10 @@
+{
+  // コミット時に自動で push する（＝Vercelへ自動デプロイ）
+  "git.postCommitCommand": "push",
+  // 変更をステージしていなくても、コミットで全変更をまとめて対象にする
+  "git.enableSmartCommit": true,
+  // 同期のたびに確認ダイアログを出さない
+  "git.confirmSync": false,
+  // リモートの変更を定期的に取得
+  "git.autofetch": true
+}

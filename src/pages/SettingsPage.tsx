@@ -169,7 +169,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <p className="mt-6 text-center text-xs text-subtle">たびろぐ</p>
+      <p className="mt-6 text-center text-xs text-subtle">たびろぐ v1.0</p>
 
       {/* profile は将来のヘッダー表示等で使う想定（未使用警告回避のため参照） */}
       <span className="hidden">{profile?.user_id}</span>
