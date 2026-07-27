@@ -1,0 +1,8 @@
+node_modules
+.node_modules_broken
+dist
+dev-dist
+.DS_Store
+.env
+.env.local
+.env.*.local
