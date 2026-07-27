@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Plane, Mail, Loader2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-type Mode = 'login' | 'signup'
+type Mode = 'login' | 'signup' | 'forgot'
 
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login')
@@ -11,13 +11,20 @@ export default function AuthPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [resetSentTo, setResetSentTo] = useState<string | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setBusy(true)
     try {
-      if (mode === 'signup') {
+      if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset`,
+        })
+        if (error) throw error
+        setResetSentTo(email)
+      } else if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -64,6 +71,84 @@ export default function AuthPage() {
             ログイン画面に戻る
           </button>
         </div>
+      </Shell>
+    )
+  }
+
+  // ---- リセットメール送信後の案内画面 ----
+  if (resetSentTo) {
+    return (
+      <Shell>
+        <div className="rounded-2xl border border-border bg-surface p-6 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+            <Mail className="w-6 h-6 text-accent" />
+          </div>
+          <h2 className="mt-4 font-bold text-lg">再設定メールを送りました</h2>
+          <p className="mt-2 text-sm text-muted leading-relaxed">
+            <span className="text-ink font-medium break-all">{resetSentTo}</span>{' '}
+            宛のメールを開いて、リンクをタップすると新しいパスワードを設定できます。
+          </p>
+          <button
+            onClick={() => {
+              setResetSentTo(null)
+              setMode('login')
+            }}
+            className="mt-6 text-sm text-accent font-medium"
+          >
+            ログイン画面に戻る
+          </button>
+        </div>
+      </Shell>
+    )
+  }
+
+  // ---- パスワード再設定リクエスト画面 ----
+  if (mode === 'forgot') {
+    return (
+      <Shell>
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border border-border bg-surface p-6"
+        >
+          <h2 className="font-bold text-lg">パスワードの再設定</h2>
+          <p className="mt-1 mb-5 text-sm text-muted leading-relaxed">
+            登録したメールアドレスに、再設定用のリンクを送ります。
+          </p>
+
+          <label className="block text-sm font-medium text-muted mb-1">
+            メールアドレス
+          </label>
+          <input
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-xl border border-border bg-bg px-4 py-3 text-sm outline-none focus:border-accent"
+            placeholder="you@example.com"
+          />
+
+          {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="mt-6 w-full rounded-xl gradient-bg text-white font-medium py-3 flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : '再設定メールを送る'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login')
+              setError(null)
+            }}
+            className="mt-4 w-full text-sm text-accent font-medium"
+          >
+            ログイン画面に戻る
+          </button>
+        </form>
       </Shell>
     )
   }
@@ -130,6 +215,19 @@ export default function AuthPage() {
             'この内容で登録'
           )}
         </button>
+
+        {mode === 'login' && (
+          <button
+            type="button"
+            onClick={() => {
+              setMode('forgot')
+              setError(null)
+            }}
+            className="mt-4 w-full text-sm text-muted"
+          >
+            パスワードをお忘れですか？
+          </button>
+        )}
 
         {mode === 'signup' && (
           <p className="mt-3 text-xs text-subtle flex items-start gap-1.5">
