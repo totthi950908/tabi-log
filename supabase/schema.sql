@@ -81,6 +81,15 @@ create table if not exists travel.invites (
   created_at timestamptz not null default now()
 );
 
+-- ---- 招待受諾の失敗履歴（レート制限用）-----------------------
+--  総当たりでトークンを探られないよう、失敗した受諾試行だけを記録する。
+--  クライアントからは一切触らせない（RLS 有効・ポリシーなし・権限も剥奪）。
+create table if not exists travel.invite_attempts (
+  id           bigserial primary key,
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  attempted_at timestamptz not null default now()
+);
+
 -- ---- 訪問記録 -----------------------------------------------
 create table if not exists travel.logs (
   id           uuid primary key default gen_random_uuid(),
@@ -121,6 +130,7 @@ create index if not exists idx_logs_trip_visited    on travel.logs (trip_id, vis
 create index if not exists idx_expenses_trip_spent  on travel.expenses (trip_id, spent_on desc);
 create index if not exists idx_invites_token_hash   on travel.invites (token_hash);
 create index if not exists idx_trips_owner          on travel.trips (owner_id);
+create index if not exists idx_invite_attempts_user on travel.invite_attempts (user_id, attempted_at desc);
 
 
 -- =============================================================
@@ -265,6 +275,9 @@ alter table travel.trip_members enable row level security;
 alter table travel.invites      enable row level security;
 alter table travel.logs         enable row level security;
 alter table travel.expenses     enable row level security;
+-- 失敗履歴はポリシーを1つも置かない＝クライアントからは読み書き一切不可。
+-- 操作するのは SECURITY DEFINER の accept_invite だけ。
+alter table travel.invite_attempts enable row level security;
 
 -- ---- profiles ----------------------------------------------
 -- 表示名と絵文字のみで機微情報はないため、ログインユーザーには閲覧を許可。
@@ -422,8 +435,16 @@ $$;
 -- ---- 受諾 ---------------------------------------------------
 --  ログイン済みユーザーが平文トークンを渡して参加する。
 --  期限・回数・失効をチェックし、重複参加を防ぐ。
+--
+--  【戻り値の約束】
+--   成功 → 参加した旅行の uuid
+--   失敗 → NULL（「このリンクは使用できません」はクライアント側で表示する）
+--
+--  失敗を raise exception にしない理由：例外を投げるとトランザクション全体が
+--  巻き戻り、直前に書いた invite_attempts の失敗記録まで消えてレート制限が
+--  機能しなくなるため。回数超過だけは記録が不要なので例外でよい。
 create or replace function travel.accept_invite(p_token text)
-returns uuid                     -- 参加した旅行の id
+returns uuid                     -- 参加した旅行の id（失敗時は NULL）
 language plpgsql
 security definer
 set search_path = travel, extensions, public
@@ -431,9 +452,20 @@ as $$
 declare
   v_hash   text;
   v_invite travel.invites%rowtype;
+  v_fails  integer;
 begin
   if auth.uid() is null then
     raise exception 'ログインが必要です';
+  end if;
+
+  -- レート制限：直近1分の失敗が5回に達していたら、照合そのものを行わない。
+  select count(*) into v_fails
+  from travel.invite_attempts
+  where user_id = auth.uid()
+    and attempted_at > now() - interval '1 minute';
+
+  if v_fails >= 5 then
+    raise exception '試行回数が多すぎます。1分ほど待ってからもう一度お試しください。';
   end if;
 
   v_hash := encode(digest(coalesce(p_token,''),'sha256'),'hex');
@@ -444,13 +476,16 @@ begin
   where token_hash = v_hash
   for update;
 
-  -- 「存在しない」「期限切れ」「失効」「上限到達」を区別せず一律エラーにする
+  -- 「存在しない」「期限切れ」「失効」「上限到達」を区別せず一律の失敗にする
   -- （リンクの存在有無を探られないようにするため）。
   if v_invite.id is null
      or v_invite.revoked_at is not null
      or v_invite.expires_at < now()
      or v_invite.used_count >= v_invite.max_uses then
-    raise exception 'このリンクは使用できません';
+    insert into travel.invite_attempts (user_id) values (auth.uid());
+    -- 失敗時のついでに古い履歴を掃除する（失敗は稀なので負荷にならない）。
+    delete from travel.invite_attempts where attempted_at < now() - interval '1 day';
+    return null;
   end if;
 
   -- すでにメンバーなら、使用回数を増やさずに旅行 id だけ返す。
@@ -477,6 +512,8 @@ $$;
 --  7. テーブル・関数の実行権限
 -- =============================================================
 grant select, insert, update, delete on all tables in schema travel to authenticated;
+-- ただし招待の失敗履歴だけは例外。RLS でも防げるが、権限自体を与えない。
+revoke all on travel.invite_attempts from authenticated;
 grant execute on function travel.create_invite(uuid, text, integer, integer) to authenticated;
 grant execute on function travel.accept_invite(text) to authenticated;
 -- ヘルパー関数は RLS 内部からのみ使うが、実行権限は付けておく。

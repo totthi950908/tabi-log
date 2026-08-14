@@ -21,13 +21,21 @@ export async function createInvite(
   return `${window.location.origin}/join#${token}`
 }
 
-/** トークンで招待を受諾し、参加した旅行の id を返す。 */
+/**
+ * トークンで招待を受諾し、参加した旅行の id を返す。
+ *
+ * RPC は失敗時に例外ではなく NULL を返す（例外だと受諾試行の失敗記録まで
+ * ロールバックされ、レート制限が効かなくなるため）。ここで文言に変換する。
+ * 「期限切れ」「存在しない」を区別しないのは、リンクの存在を探らせないため。
+ */
 export async function acceptInvite(token: string): Promise<string> {
   const { data, error } = await supabase.rpc('accept_invite', {
     p_token: token,
   })
   if (error) throw error
-  return data as string
+  const tripId = data as string | null
+  if (!tripId) throw new Error('このリンクは使用できません')
+  return tripId
 }
 
 export async function updateMemberRole(
