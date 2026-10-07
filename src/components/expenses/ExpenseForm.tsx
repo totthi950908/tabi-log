@@ -8,8 +8,14 @@ import {
   type ExpenseInput,
 } from '@/lib/expenses'
 import { errMsg } from '@/utils/error'
-import { yen } from '@/utils/format'
-import type { Trip, ExpenseJpy, ExpenseCategory, TripMember } from '@/types'
+import { yen, fmtDateTime } from '@/utils/format'
+import type {
+  Trip,
+  ExpenseJpy,
+  ExpenseCategory,
+  TripMember,
+  VisitLog,
+} from '@/types'
 
 export const EXPENSE_CATEGORIES: { key: ExpenseCategory; emoji: string }[] = [
   { key: '交通費', emoji: '🚄' },
@@ -24,6 +30,7 @@ export default function ExpenseForm({
   trip,
   userId,
   members,
+  logs,
   editing,
   onClose,
   onSaved,
@@ -31,6 +38,7 @@ export default function ExpenseForm({
   trip: Trip
   userId: string
   members: TripMember[]
+  logs: VisitLog[]
   editing: ExpenseJpy | null
   onClose: () => void
   onSaved: () => void
@@ -51,6 +59,7 @@ export default function ExpenseForm({
   )
   const [payer, setPayer] = useState(editing?.payer_id ?? userId)
   const [memo, setMemo] = useState(editing?.memo ?? '')
+  const [logId, setLogId] = useState(editing?.log_id ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -74,6 +83,7 @@ export default function ExpenseForm({
       currency,
       payer_id: payer,
       memo: memo.trim() || null,
+      log_id: logId || null,
     }
     setBusy(true)
     try {
@@ -191,6 +201,27 @@ export default function ExpenseForm({
             ))}
           </select>
         </label>
+
+        {/* 訪問記録との紐づけ（LOG-07） */}
+        {logs.length > 0 && (
+          <label className="block">
+            <span className="block text-sm font-medium text-muted mb-1">
+              訪問記録（任意）
+            </span>
+            <select
+              value={logId}
+              onChange={(e) => setLogId(e.target.value)}
+              className={modalInputCls}
+            >
+              <option value="">紐づけない</option>
+              {logs.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {fmtDateTime(l.visited_at)} {l.place_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         {/* メモ */}
         <label className="block">

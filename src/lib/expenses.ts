@@ -8,6 +8,7 @@ export type ExpenseInput = {
   currency: string
   payer_id: string
   memo: string | null
+  log_id: string | null // 紐づける訪問記録（LOG-07、任意）
 }
 
 /** 支出一覧（円換算額つき、日付の新しい順）。 */

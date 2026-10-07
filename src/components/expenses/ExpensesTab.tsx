@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, Loader2, Receipt } from 'lucide-react'
+import { Plus, Loader2, Receipt, MapPin } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
-import type { Trip, ExpenseJpy, TripMember } from '@/types'
+import type { Trip, ExpenseJpy, TripMember, VisitLog } from '@/types'
 import { listExpenses, listMembers } from '@/lib/expenses'
+import { listLogs } from '@/lib/logs'
 import { errMsg } from '@/utils/error'
 import { yen, num } from '@/utils/format'
 import { currencySymbol } from '@/data/currencies'
@@ -23,18 +24,21 @@ export default function ExpensesTab({
 }) {
   const [expenses, setExpenses] = useState<ExpenseJpy[]>([])
   const [members, setMembers] = useState<TripMember[]>([])
+  const [logs, setLogs] = useState<VisitLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<{ editing: ExpenseJpy | null } | null>(null)
 
   async function reload() {
     try {
-      const [e, m] = await Promise.all([
+      const [e, m, l] = await Promise.all([
         listExpenses(trip.id),
         listMembers(trip.id),
+        listLogs(trip.id),
       ])
       setExpenses(e)
       setMembers(m)
+      setLogs(l)
     } catch (err) {
       setError(errMsg(err))
     } finally {
@@ -88,6 +92,7 @@ export default function ExpensesTab({
           {expenses.map((e) => {
             const cat = EXPENSE_CATEGORIES.find((c) => c.key === e.category)
             const foreign = e.currency !== 'JPY'
+            const log = e.log_id ? logs.find((l) => l.id === e.log_id) : null
             return (
               <div
                 key={e.id}
@@ -112,6 +117,12 @@ export default function ExpensesTab({
                     <span className="ml-1">{emojiOf(e.payer_id)}</span>
                     {e.memo && <span className="ml-1">・{e.memo}</span>}
                   </p>
+                  {log && (
+                    <p className="text-xs text-accent mt-0.5 flex items-center gap-0.5 min-w-0">
+                      <MapPin className="w-3 h-3 shrink-0" />
+                      <span className="line-clamp-1">{log.place_name}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <p className="font-semibold">{yen(e.amount_jpy)}</p>
@@ -142,6 +153,7 @@ export default function ExpensesTab({
           trip={trip}
           userId={userId}
           members={members}
+          logs={logs}
           editing={form.editing}
           onClose={() => setForm(null)}
           onSaved={() => {

@@ -4,8 +4,9 @@ import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import type { Trip, VisitLog, Profile } from '@/types'
 import { listLogs, profilesByIds, signedUrls } from '@/lib/logs'
+import { listExpenses } from '@/lib/expenses'
 import { errMsg } from '@/utils/error'
-import { countryFlag } from '@/utils/format'
+import { countryFlag, yen } from '@/utils/format'
 import { countryName } from '@/data/countries'
 import LogForm, { LOG_CATEGORIES } from './LogForm'
 
@@ -23,14 +24,23 @@ export default function LogsTab({
   const [logs, setLogs] = useState<VisitLog[]>([])
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
+  // 訪問記録ごとの、紐づいた支出の合計（円換算、LOG-07）
+  const [spentByLog, setSpentByLog] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState<{ editing: VisitLog | null } | null>(null)
 
   async function reload() {
     try {
-      const l = await listLogs(trip.id)
+      const [l, ex] = await Promise.all([
+        listLogs(trip.id),
+        listExpenses(trip.id),
+      ])
       setLogs(l)
+      const spent: Record<string, number> = {}
+      for (const e of ex)
+        if (e.log_id) spent[e.log_id] = (spent[e.log_id] ?? 0) + e.amount_jpy
+      setSpentByLog(spent)
       setProfiles(await profilesByIds(l.map((x) => x.author_id)))
       const paths = l
         .map((x) => x.photo_path)
@@ -93,6 +103,7 @@ export default function LogsTab({
                     log={log}
                     author={profiles[log.author_id]}
                     photoUrl={log.photo_path ? photoUrls[log.photo_path] : undefined}
+                    spentJpy={spentByLog[log.id]}
                     onClick={
                       canEdit && (log.author_id === userId || isOwner)
                         ? () => setForm({ editing: log })
@@ -142,11 +153,13 @@ function LogCard({
   log,
   author,
   photoUrl,
+  spentJpy,
   onClick,
 }: {
   log: VisitLog
   author?: Profile
   photoUrl?: string
+  spentJpy?: number
   onClick?: () => void
 }) {
   const cat = LOG_CATEGORIES.find((c) => c.key === log.category)
@@ -188,6 +201,7 @@ function LogCard({
                   ))}
                 </span>
               ) : null}
+              {spentJpy ? <span>💴 {yen(spentJpy)}</span> : null}
             </div>
             {log.note && (
               <p className="text-sm text-muted mt-1 whitespace-pre-wrap">
