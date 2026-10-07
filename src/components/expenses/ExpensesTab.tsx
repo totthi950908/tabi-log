@@ -8,6 +8,7 @@ import { errMsg } from '@/utils/error'
 import { yen, num } from '@/utils/format'
 import { currencySymbol } from '@/data/currencies'
 import ExpenseForm, { EXPENSE_CATEGORIES } from './ExpenseForm'
+import RateNotice from './RateNotice'
 
 export default function ExpensesTab({
   trip,
@@ -71,6 +72,7 @@ export default function ExpensesTab({
           </p>
         )}
       </div>
+      <RateNotice trip={trip} className="mt-2" />
 
       {expenses.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface p-8 text-center">

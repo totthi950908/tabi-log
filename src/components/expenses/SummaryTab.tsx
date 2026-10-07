@@ -5,6 +5,7 @@ import { listExpenses, listMembers } from '@/lib/expenses'
 import { errMsg } from '@/utils/error'
 import { yen } from '@/utils/format'
 import { EXPENSE_CATEGORIES } from './ExpenseForm'
+import RateNotice from './RateNotice'
 
 const BAR_COLORS = [
   'bg-sky-400',
@@ -82,6 +83,8 @@ export default function SummaryTab({ trip }: { trip: Trip }) {
 
   return (
     <div className="space-y-6">
+      <RateNotice trip={trip} />
+
       {/* 予算消化 */}
       {trip.budget != null && trip.budget > 0 && (
         <section className="rounded-2xl border border-border bg-surface p-4">
