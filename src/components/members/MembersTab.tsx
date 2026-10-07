@@ -17,6 +17,7 @@ import {
   removeMember,
   listActiveInvites,
   revokeInvite,
+  transferOwnership,
 } from '@/lib/members'
 import { errMsg } from '@/utils/error'
 import { fmtDateTime } from '@/utils/format'
@@ -33,16 +34,20 @@ export default function MembersTab({
   trip,
   userId,
   isOwner,
+  onOwnerChanged,
 }: {
   trip: Trip
   userId: string
   isOwner: boolean
+  /** オーナー委譲後、旅行と自分の権限を読み直すため親に知らせる */
+  onOwnerChanged: () => void
 }) {
   const [members, setMembers] = useState<TripMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [invites, setInvites] = useState<Invite[]>([])
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [transferOpen, setTransferOpen] = useState(false)
   const navigate = useNavigate()
 
   async function reload() {
@@ -214,6 +219,28 @@ export default function MembersTab({
         </div>
       )}
 
+      {/* オーナーは退出できないので、先に権限を渡す（SHARE-08） */}
+      {isOwner && members.length > 1 && (
+        <button
+          onClick={() => setTransferOpen(true)}
+          className="mt-6 w-full rounded-xl border border-border py-3 text-sm text-muted flex items-center justify-center gap-1.5"
+        >
+          <Crown className="w-4 h-4" /> オーナー権限を渡す
+        </button>
+      )}
+
+      {transferOpen && (
+        <TransferDialog
+          trip={trip}
+          candidates={members.filter((m) => m.user_id !== userId)}
+          onClose={() => setTransferOpen(false)}
+          onDone={() => {
+            setTransferOpen(false)
+            onOwnerChanged()
+          }}
+        />
+      )}
+
       {inviteOpen && (
         <InviteDialog
           trip={trip}
@@ -342,6 +369,89 @@ function InviteDialog({
           </div>
         </div>
       )}
+    </Modal>
+  )
+}
+
+function TransferDialog({
+  trip,
+  candidates,
+  onClose,
+  onDone,
+}: {
+  trip: Trip
+  candidates: TripMember[]
+  onClose: () => void
+  onDone: () => void
+}) {
+  const [target, setTarget] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit() {
+    const m = candidates.find((c) => c.user_id === target)
+    if (!m) return
+    if (
+      !confirm(
+        `${m.display_name} さんをオーナーにしますか？\nあなたは「編集可」になり、元に戻すには新しいオーナーに渡し直してもらう必要があります。`,
+      )
+    )
+      return
+    setBusy(true)
+    setError(null)
+    try {
+      await transferOwnership(trip.id, m.user_id)
+      onDone()
+    } catch (e) {
+      setError(errMsg(e))
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="オーナー権限を渡す" onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-muted leading-relaxed">
+          オーナーは旅行の削除・招待・メンバー管理ができます。渡したあと、あなたは「編集可」のメンバーになり、旅行から退出できるようになります。
+        </p>
+
+        <div className="space-y-2">
+          {candidates.map((m) => (
+            <button
+              key={m.user_id}
+              type="button"
+              onClick={() => setTarget(m.user_id)}
+              className={`w-full rounded-2xl p-3 flex items-center gap-3 text-left transition ${
+                target === m.user_id
+                  ? 'bg-accent/10 ring-2 ring-accent'
+                  : 'bg-surface2'
+              }`}
+            >
+              <span className="w-9 h-9 rounded-full bg-surface flex items-center justify-center text-lg">
+                {m.emoji}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-medium line-clamp-1">
+                  {m.display_name}
+                </span>
+                <span className="block text-xs text-muted">
+                  {ROLE_LABEL[m.role]}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+
+        <button
+          onClick={submit}
+          disabled={!target || busy}
+          className="w-full rounded-xl gradient-bg text-white font-medium py-3 flex items-center justify-center disabled:opacity-60"
+        >
+          {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : 'オーナーにする'}
+        </button>
+      </div>
     </Modal>
   )
 }

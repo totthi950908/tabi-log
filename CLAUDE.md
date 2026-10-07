@@ -49,7 +49,7 @@ React 18 + TypeScript + Vite + Tailwind + Supabase の SPA（PWA）。状態管�
 
 **別アプリ（推し活アプリ）と同じ Supabase プロジェクトを共有し、`travel` スキーマで分離している。** クライアントは `db: { schema: 'travel' }` を既定にしているので、`supabase.from('trips')` は `travel.trips` を指す。ダッシュボードの Settings > API > Exposed schemas に `travel` の登録が必要。
 
-SQL は手動適用（マイグレーションツール無し）。**新規セットアップ時の実行順は `schema.sql` → `schema_plan.sql` → `schema_logs.sql` → `schema_account.sql`。** スキーマを変更するときは、対象ファイルを冪等（`if not exists` / `drop policy if exists`）に保ったまま追記する。
+SQL は手動適用（マイグレーションツール無し）。**新規セットアップ時の実行順は `schema.sql` → `schema_plan.sql` → `schema_logs.sql` → `schema_account.sql` → `schema_owner.sql`。** スキーマを変更するときは、対象ファイルを冪等（`if not exists` / `drop policy if exists`）に保ったまま追記する。
 
 ### 権限モデル（RLS が正）
 

@@ -82,6 +82,21 @@ export async function updateMemberRole(
   if (error) throw error
 }
 
+/**
+ * オーナー権限を別のメンバーに渡す（SHARE-08）。自分は「編集可」になる。
+ * trip_members.role と trips.owner_id を同時に書き換えるため RPC 経由のみ。
+ */
+export async function transferOwnership(
+  tripId: string,
+  newOwnerId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('transfer_ownership', {
+    p_trip_id: tripId,
+    p_new_owner: newOwnerId,
+  })
+  if (error) throw error
+}
+
 export async function removeMember(
   tripId: string,
   userId: string,

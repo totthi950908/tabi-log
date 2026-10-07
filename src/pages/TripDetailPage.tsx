@@ -51,13 +51,18 @@ export default function TripDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmDel, setConfirmDel] = useState(false)
 
-  useEffect(() => {
+  function load() {
     if (!id) return
     getTrip(id)
       .then((t) => setTrip(t))
       .catch((e) => setError(errMsg(e)))
       .finally(() => setLoading(false))
     if (user) getMyRole(id, user.id).then(setRole)
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user])
 
   async function handleDelete() {
@@ -190,7 +195,12 @@ export default function TripDetailPage() {
         ) : tab === 'summary' ? (
           <SummaryTab trip={trip} />
         ) : (
-          <MembersTab trip={trip} userId={user?.id ?? ''} isOwner={isOwner} />
+          <MembersTab
+            trip={trip}
+            userId={user?.id ?? ''}
+            isOwner={isOwner}
+            onOwnerChanged={load}
+          />
         )}
       </div>
 
