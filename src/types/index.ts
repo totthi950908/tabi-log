@@ -66,6 +66,16 @@ export type TripMember = {
   emoji: string
 }
 
+/** 発行済みの招待リンク（オーナーのみ取得可）。token_hash は画面で使わないので持たない。 */
+export type Invite = {
+  id: string
+  role: 'editor' | 'viewer'
+  expires_at: string
+  max_uses: number
+  used_count: number
+  created_at: string
+}
+
 export type BookingType = 'flight' | 'hotel' | 'transport' | 'other'
 
 export type Booking = {

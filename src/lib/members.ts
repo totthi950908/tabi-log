@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Role } from '@/types'
+import type { Invite, Role } from '@/types'
 
 export { listMembers } from '@/lib/expenses'
 
@@ -19,6 +19,37 @@ export async function createInvite(
   if (error) throw error
   const token = data as string
   return `${window.location.origin}/join#${token}`
+}
+
+/**
+ * まだ使える招待リンク（未失効・期限内・回数残あり）を新しい順に返す。
+ * RLS でオーナー以外は0件になる。
+ */
+export async function listActiveInvites(tripId: string): Promise<Invite[]> {
+  const { data, error } = await supabase
+    .from('invites')
+    .select('id, role, expires_at, max_uses, used_count, created_at')
+    .eq('trip_id', tripId)
+    .is('revoked_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  // 列どうしの比較は PostgREST のフィルタで書けないのでここで絞る
+  return (data as Invite[]).filter((i) => i.used_count < i.max_uses)
+}
+
+/** 招待リンクを無効化する（SHARE-04）。以降そのリンクでは参加できない。 */
+export async function revokeInvite(inviteId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('invites')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', inviteId)
+    .is('revoked_at', null)
+    .select('id')
+  if (error) throw error
+  // RLS で弾かれた UPDATE はエラーにならず0件になるため、件数で判定する
+  if (!data || data.length === 0)
+    throw new Error('招待リンクを無効化できませんでした')
 }
 
 /**

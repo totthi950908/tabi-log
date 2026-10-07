@@ -7,6 +7,7 @@ import {
   Eye,
   LogOut,
   X,
+  Link2,
 } from 'lucide-react'
 import Modal from '@/components/layout/Modal'
 import {
@@ -14,9 +15,12 @@ import {
   createInvite,
   updateMemberRole,
   removeMember,
+  listActiveInvites,
+  revokeInvite,
 } from '@/lib/members'
 import { errMsg } from '@/utils/error'
-import type { Trip, TripMember, Role } from '@/types'
+import { fmtDateTime } from '@/utils/format'
+import type { Trip, TripMember, Role, Invite } from '@/types'
 import { useNavigate } from 'react-router-dom'
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -37,12 +41,15 @@ export default function MembersTab({
   const [members, setMembers] = useState<TripMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [invites, setInvites] = useState<Invite[]>([])
   const [inviteOpen, setInviteOpen] = useState(false)
   const navigate = useNavigate()
 
   async function reload() {
     try {
       setMembers(await listMembers(trip.id))
+      // 招待リンクの一覧はオーナーにしか見えない（RLS）
+      if (isOwner) setInvites(await listActiveInvites(trip.id))
     } catch (e) {
       setError(errMsg(e))
     } finally {
@@ -53,7 +60,7 @@ export default function MembersTab({
   useEffect(() => {
     reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trip.id])
+  }, [trip.id, isOwner])
 
   async function changeRole(m: TripMember, role: Role) {
     await updateMemberRole(trip.id, m.user_id, role).catch((e) =>
@@ -65,6 +72,17 @@ export default function MembersTab({
   async function kick(m: TripMember) {
     if (!confirm(`${m.display_name} さんを旅行から外しますか？`)) return
     await removeMember(trip.id, m.user_id).catch((e) => setError(errMsg(e)))
+    reload()
+  }
+
+  async function revoke(inv: Invite) {
+    if (
+      !confirm(
+        'この招待リンクを無効化しますか？\nすでに送ったリンクは使えなくなります（参加済みのメンバーはそのままです）。',
+      )
+    )
+      return
+    await revokeInvite(inv.id).catch((e) => setError(errMsg(e)))
     reload()
   }
 
@@ -155,8 +173,50 @@ export default function MembersTab({
         ))}
       </div>
 
+      {/* 発行済みで、まだ使える招待リンク（SHARE-04） */}
+      {isOwner && invites.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-muted mb-2">
+            有効な招待リンク
+          </h3>
+          <div className="space-y-2">
+            {invites.map((inv) => (
+              <div
+                key={inv.id}
+                className="rounded-2xl border border-border bg-surface p-3 flex items-center gap-3"
+              >
+                <div className="w-10 h-10 rounded-full bg-surface2 flex items-center justify-center text-muted">
+                  <Link2 className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">
+                    {ROLE_LABEL[inv.role]}・{fmtDateTime(inv.created_at)} 発行
+                  </p>
+                  <p className="text-xs text-muted">
+                    {fmtDateTime(inv.expires_at)} まで・{inv.used_count}/
+                    {inv.max_uses} 回使用
+                  </p>
+                </div>
+                <button
+                  onClick={() => revoke(inv)}
+                  className="rounded-lg bg-surface2 text-danger text-xs font-medium px-3 py-2"
+                >
+                  無効化
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {inviteOpen && (
-        <InviteDialog trip={trip} onClose={() => setInviteOpen(false)} />
+        <InviteDialog
+          trip={trip}
+          onClose={() => {
+            setInviteOpen(false)
+            reload()
+          }}
+        />
       )}
     </div>
   )
@@ -237,7 +297,7 @@ function InviteDialog({
           </div>
 
           <p className="text-xs text-subtle leading-relaxed">
-            リンクを知っている人が参加できます。有効期限内・10回まで使えます。あとから「無効化」もできます。
+            リンクを知っている人が参加できます。有効期限内・10回まで使えます。あとからメンバー画面の「有効な招待リンク」で無効化もできます。
           </p>
 
           {error && <p className="text-sm text-danger">{error}</p>}
