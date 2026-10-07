@@ -174,11 +174,16 @@ export default function MembersTab({
       </div>
 
       {/* 発行済みで、まだ使える招待リンク（SHARE-04） */}
-      {isOwner && invites.length > 0 && (
+      {isOwner && (
         <div className="mt-6">
           <h3 className="text-sm font-medium text-muted mb-2">
             有効な招待リンク
           </h3>
+          {invites.length === 0 && (
+            <p className="text-xs text-subtle">
+              有効な招待リンクはありません。期限切れ・上限到達・無効化済みのリンクはここに表示されません。
+            </p>
+          )}
           <div className="space-y-2">
             {invites.map((inv) => (
               <div
